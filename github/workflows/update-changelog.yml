@@ -1,0 +1,25 @@
+name: Update Changelog
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Generate Changelog
+      run: |
+        echo "## Recent Changes" > CHANGELOG.md
+        git log --oneline --since="1 week ago" >> CHANGELOG.md
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Actions"
+        git add CHANGELOG.md
+        git commit -m "Update changelog with recent changes"
+        git push
