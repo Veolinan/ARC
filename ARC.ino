@@ -11,6 +11,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 const int buttonNextPin = 14;   // Pin for the "Next" button (D5)
 const int buttonPrevPin = 4;    // Pin for the "Previous" button (D2)
 const int buttonOKPin = 2;      // Pin for the "OK" button (D4)
+const int buzzerPin = 17;       // Pin for the buzzer
 
 int currentQuestion = 0;
 int selectedOption = 0;
@@ -26,7 +27,8 @@ bool lastButtonStatePrev = HIGH;
 bool lastButtonStateOK = HIGH;
 
 // BAI questions
-const char* questions[21] = {
+const char* questions[22] = {
+  "Are you feeling alright?",  // Decoy question
   "Numbness or tingling",
   "Feeling hot",
   "Wobbliness in legs",
@@ -53,15 +55,16 @@ const char* questions[21] = {
 // Options for BAI questions
 const char* options[4] = {"0) Not at all", "1) Mildly", "2) Moderately", "3) Severely"};
 
-int responses[21] = {0};  // To store user responses
+// Responses array to store user's answers
+int responses[21] = {0}; // Only storing answers for the actual BAI questions
 
 void setup() {
   Serial.begin(115200);
 
   // Initialize OLED
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
-    for(;;);
+    for (;;);
   }
   display.display();
   delay(2000);  // Pause for 2 seconds
@@ -70,7 +73,10 @@ void setup() {
   pinMode(buttonNextPin, INPUT_PULLUP);
   pinMode(buttonPrevPin, INPUT_PULLUP);
   pinMode(buttonOKPin, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
 
+  // Start the BAI questions directly
+  currentQuestion = 0; // Ensure starting at the first question
   showQuestion();
 }
 
@@ -82,11 +88,11 @@ void loop() {
   int readingPrev = digitalRead(buttonPrevPin);
   int readingOK = digitalRead(buttonOKPin);
 
-  // Handle Next button
+  // Handle Next button for selecting options
   if (readingNext == LOW && (currentTime - lastDebounceTime) > debounceDelay) {
-    if (lastButtonStateNext == HIGH) { // Button pressed
-      selectedOption = (selectedOption + 1) % 4;
-      showQuestion();
+    if (lastButtonStateNext == HIGH) {
+      selectedOption = (selectedOption + 1) % 4; // Cycle through options
+      showQuestion(); // Update the display with the new selection
     }
     lastDebounceTime = currentTime;
     lastButtonStateNext = LOW;
@@ -94,11 +100,11 @@ void loop() {
     lastButtonStateNext = HIGH;
   }
 
-  // Handle Previous button
+  // Handle Previous button for selecting options
   if (readingPrev == LOW && (currentTime - lastDebounceTime) > debounceDelay) {
-    if (lastButtonStatePrev == HIGH) { // Button pressed
-      selectedOption = (selectedOption - 1 + 4) % 4;
-      showQuestion();
+    if (lastButtonStatePrev == HIGH) {
+      selectedOption = (selectedOption - 1 + 4) % 4; // Cycle through options backwards
+      showQuestion(); // Update the display with the new selection
     }
     lastDebounceTime = currentTime;
     lastButtonStatePrev = LOW;
@@ -108,24 +114,26 @@ void loop() {
 
   // Handle OK button
   if (readingOK == LOW && (currentTime - lastDebounceTime) > debounceDelay) {
-    if (lastButtonStateOK == HIGH) { // Button pressed
-      if (currentQuestion < 21) {
-        responses[currentQuestion] = selectedOption;
-        displayAnswerRecorded(); // Show confirmation message
-        delay(2000); // Show message for 2 seconds
-        selectedOption = 0;
-        currentQuestion = (currentQuestion + 1) % 21;
+    if (lastButtonStateOK == HIGH) {
+      if (selectedOption >= 0 && selectedOption < 4) {
         if (currentQuestion == 0) {
-          showScore();
-        } else {
+          // Skip the decoy question
+          currentQuestion++;
           showQuestion();
+        } else {
+          responses[currentQuestion - 1] = selectedOption; // Record the answer for actual questions
+          currentQuestion++; // Move to the next question
+
+          if (currentQuestion < 22) {
+            showQuestion(); // Show the next question
+          } else {
+            showScore(); // Show final score after all questions
+          }
         }
-      } else {
-        showEndMenu(); // Show restart/exit menu
       }
+      lastDebounceTime = currentTime;
+      lastButtonStateOK = LOW;
     }
-    lastDebounceTime = currentTime;
-    lastButtonStateOK = LOW;
   } else if (readingOK == HIGH) {
     lastButtonStateOK = HIGH;
   }
@@ -135,11 +143,15 @@ void showQuestion() {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  
+
   display.setCursor(0, 0);
-  display.print("Q");
-  display.print(currentQuestion + 1);
-  display.print(": ");
+  if (currentQuestion == 0) {
+    display.print("Decoy Question:");
+  } else {
+    display.print("Q");
+    display.print(currentQuestion); // Display question number starting from 1
+    display.print(": ");
+  }
   display.print(questions[currentQuestion]);
 
   for (int i = 0; i < 4; i++) {
@@ -151,7 +163,7 @@ void showQuestion() {
     }
     display.print(options[i]);
   }
-  
+
   display.display();
 }
 
@@ -160,113 +172,17 @@ void showScore() {
   for (int i = 0; i < 21; i++) {
     score += responses[i];
   }
-  
+
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  
+
   display.setCursor(0, 0);
   display.print("BAI Completed!");
   display.setCursor(0, 10);
   display.print("Total Score: ");
   display.print(score);
-  
-  display.display();
-}
-
-void displayAnswerRecorded() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  
-  display.setCursor(0, 0);
-  display.print("Answer Recorded!");
-  
-  display.display();
-}
-
-void showEndMenu() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  
-  display.setCursor(0, 0);
-  display.print("Test Completed!");
-  display.setCursor(0, 10);
-  display.print("1) Restart");
-  display.setCursor(0, 20);
-  display.print("2) Exit");
 
   display.display();
-  handleEndMenu();
-}
-
-void handleEndMenu() {
-  unsigned long currentTime = millis();
-  bool restartSelected = false;
-  bool exitSelected = false;
-
-  while (!restartSelected && !exitSelected) {
-    unsigned long now = millis();
-
-    int readingNext = digitalRead(buttonNextPin);
-    int readingPrev = digitalRead(buttonPrevPin);
-    int readingOK = digitalRead(buttonOKPin);
-
-    // Handle navigation in end menu
-    if (readingNext == LOW && (now - lastDebounceTime) > debounceDelay) {
-      if (lastButtonStateNext == HIGH) {
-        // Switch between Restart and Exit options
-        if (display.getCursorY() == 10) {
-          display.setCursor(0, 20);
-        } else {
-          display.setCursor(0, 10);
-        }
-        display.display();
-      }
-      lastDebounceTime = now;
-      lastButtonStateNext = LOW;
-    } else if (readingNext == HIGH) {
-      lastButtonStateNext = HIGH;
-    }
-
-    if (readingPrev == LOW && (now - lastDebounceTime) > debounceDelay) {
-      if (lastButtonStatePrev == HIGH) {
-        // Switch between Restart and Exit options
-        if (display.getCursorY() == 20) {
-          display.setCursor(0, 10);
-        } else {
-          display.setCursor(0, 20);
-        }
-        display.display();
-      }
-      lastDebounceTime = now;
-      lastButtonStatePrev = LOW;
-    } else if (readingPrev == HIGH) {
-      lastButtonStatePrev = HIGH;
-    }
-
-    if (readingOK == LOW && (now - lastDebounceTime) > debounceDelay) {
-      if (lastButtonStateOK == HIGH) {
-        if (display.getCursorY() == 10) {
-          // Restart test
-          currentQuestion = 0;
-          score = 0;
-          for (int i = 0; i < 21; i++) {
-            responses[i] = 0;
-          }
-          showQuestion();
-        } else if (display.getCursorY() == 20) {
-          // Exit test
-          while (true); // Stop further execution
-        }
-        restartSelected = true;
-        exitSelected = true;
-      }
-      lastDebounceTime = now;
-      lastButtonStateOK = LOW;
-    } else if (readingOK == HIGH) {
-      lastButtonStateOK = HIGH;
-    }
-  }
+  delay(5000); // Show score for 5 seconds
 }
