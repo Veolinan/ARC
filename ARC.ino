@@ -16,6 +16,7 @@ const int buzzerPin = 17;       // Pin for the buzzer
 int currentQuestion = 0;
 int selectedOption = 0;
 int score = 0;
+bool restartTest = false; // Flag to indicate if the test should be restarted
 
 // Debouncing variables
 unsigned long lastDebounceTime = 0;
@@ -120,7 +121,7 @@ void loop() {
           // Skip the decoy question
           currentQuestion++;
           showQuestion();
-        } else {
+        } else if (currentQuestion < 22) {
           responses[currentQuestion - 1] = selectedOption; // Record the answer for actual questions
           currentQuestion++; // Move to the next question
 
@@ -129,6 +130,13 @@ void loop() {
           } else {
             showScore(); // Show final score after all questions
           }
+        } else if (restartTest) {
+          restartTest = false;
+          currentQuestion = 0; // Restart the test
+          for (int i = 0; i < 21; i++) {
+            responses[i] = 0; // Reset responses
+          }
+          showQuestion(); // Start from the first question
         }
       }
       lastDebounceTime = currentTime;
@@ -146,7 +154,7 @@ void showQuestion() {
 
   display.setCursor(0, 0);
   if (currentQuestion == 0) {
-    display.print("Decoy Question:");
+    display.print("Quick one:");
   } else {
     display.print("Q");
     display.print(currentQuestion); // Display question number starting from 1
@@ -173,6 +181,19 @@ void showScore() {
     score += responses[i];
   }
 
+  // Determine the classification based on the score
+  String classification;
+  if (score >= 0 && score <= 7) {
+    classification = "Low";
+  } else if (score >= 8 && score <= 15) {
+    classification = "Mild";
+  } else if (score >= 16 && score <= 25) {
+    classification = "Moderate";
+  } else if (score >= 26 && score <= 63) {
+    classification = "Severe";
+  }
+
+  // Display the score and classification on the OLED
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -182,7 +203,20 @@ void showScore() {
   display.setCursor(0, 10);
   display.print("Total Score: ");
   display.print(score);
+  display.setCursor(0, 20);
+  display.print("Classification: ");
+  display.print(classification);
+  display.setCursor(0, 30);
+  display.print("Press OK to restart");
 
   display.display();
+
+  // Print the score and classification on the serial monitor
+  Serial.print("Total Score: ");
+  Serial.println(score);
+  Serial.print("Classification: ");
+  Serial.println(classification);
+
+  restartTest = true; // Set flag to restart the test
   delay(5000); // Show score for 5 seconds
 }
