@@ -181,114 +181,147 @@ void showScore() {
     score += responses[i];
   }
 
-  // Output total score and classification on serial monitor
-  Serial.print("Total Score: ");
-  Serial.println(score);
+  // Determine the classification based on the score
+  String classification;
   if (score >= 0 && score <= 7) {
-    Serial.println("Classification: Minimal");
+    classification = "Minimal";
   } else if (score >= 8 && score <= 15) {
-    Serial.println("Classification: Mild");
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.print("Press OK to proceed");
-    display.display();
-    waitForOKButton();
-    diaphragmaticBreathing();
-    return;
+    classification = "Mild";
   } else if (score >= 16 && score <= 25) {
-    Serial.println("Classification: Moderate");
-  } else if (score >= 26) {
-    Serial.println("Classification: Severe");
+    classification = "Moderate";
+  } else if (score >= 26 && score <= 63) {
+    classification = "Severe";
   }
 
+  // Display the score and classification on the OLED
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
+
   display.setCursor(0, 0);
   display.print("BAI Completed!");
   display.setCursor(0, 10);
   display.print("Total Score: ");
   display.print(score);
+  display.setCursor(0, 20);
+  display.print("Classification: ");
+  display.print(classification);
   display.setCursor(0, 30);
   display.print("Press OK to restart");
 
   display.display();
-  restartTest = true; // Set flag to restart the test
-  waitForOKButton();
+
+  // Print the score and classification on the serial monitor
+  Serial.print("Total Score: ");
+  Serial.println(score);
+  Serial.print("Classification: ");
+  Serial.println(classification);
+
+  // If the score is between 16 and 25, call the 4-7-8 method
+  if (score >= 16 && score <= 25) {
+    delay(5000); // Show score for 5 seconds
+    method478();
+  } else {
+    restartTest = true; // Set flag to restart the test
+    delay(5000); // Show score for 5 seconds
+  }
 }
 
-void diaphragmaticBreathing() {
-  // Step 1: Display initial message
+void method478() {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
+
+  // Step 1: Display "Press OK to proceed"
   display.setCursor(0, 0);
-  display.print("Sit or lie down comfortably.");
-  display.setCursor(0, 20);
-  display.print("Once ready press Next");
+  display.print("Press OK to proceed");
   display.display();
 
-  // Wait for user to press Next
-  waitForNextButton();
+  // Wait for OK button to be pressed
+  while (digitalRead(buttonOKPin) == HIGH) {
+    delay(10); // Debounce delay
+  }
 
-  // Step 2: Display hand placement message
+  // Step 2: Display "Sit or lie down comfortably. Once done press Next"
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Place one hand on your chest");
+  display.print("Sit or lie down");
+  display.setCursor(0, 10);
+  display.print("comfortably.");
   display.setCursor(0, 20);
-  display.print("and the other on your abdomen");
+  display.print("Once done press Next");
   display.display();
-  delay(2500);
 
-  // Step 3: Display inhalation message
+  // Wait for Next button to be pressed
+  while (digitalRead(buttonNextPin) == HIGH) {
+    delay(10); // Debounce delay
+  }
+
+  // Step 3: Display "Inhale quietly through your nose until you hear a sound." for 4.5 seconds
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Inhale deeply through your nose");
+  display.print("Inhale quietly");
+  display.setCursor(0, 10);
+  display.print("through your nose");
   display.setCursor(0, 20);
   display.print("until you hear a sound.");
-  display.setCursor(0, 40);
-  display.print("Make sure abdomen rises");
-  display.setCursor(0, 60);
-  display.print("more than your chest");
   display.display();
-  delay(4000);
+  delay(4500); // 4.5 seconds
+  tone(buzzerPin, 1000, 500); // Beep buzzer twice
+  delay(500);
+  tone(buzzerPin, 1000, 500);
 
-  // Step 4: Start buzzer and display exhalation message
+  // Step 4: Display "Hold your breath until you hear a sound." for 7.5 seconds
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Exhale slowly through your mouth");
+  display.print("Hold your breath");
+  display.setCursor(0, 10);
+  display.print("until you hear a sound.");
+  display.display();
+  delay(7500); // 7.5 seconds
+  tone(buzzerPin, 1000, 500); // Beep buzzer twice
+  delay(500);
+  tone(buzzerPin, 1000, 500);
+
+  // Step 5: Beep buzzer continuously for 8 seconds while displaying "Exhale completely through your mouth until sound stops"
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Exhale completely");
+  display.setCursor(0, 10);
+  display.print("through your mouth");
   display.setCursor(0, 20);
   display.print("until sound stops");
   display.display();
-  tone(buzzerPin, 2000); // Start buzzer with softer tone
-  delay(3000); // Sound buzzer for 3 seconds
-  noTone(buzzerPin); // Stop buzzer
+  tone(buzzerPin, 1000); // Continuous beep
+  delay(8000); // 8 seconds
+  noTone(buzzerPin);
 
-  // Step 5: Restart test
-  restartTest = false;
-  currentQuestion = 0;
-  for (int i = 0; i < 21; i++) {
-    responses[i] = 0;
-  }
-  showQuestion();
-}
+  // Step 6: Display "Press Prev to retake remedy, OK to proceed"
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Press Prev to");
+  display.setCursor(0, 10);
+  display.print("retake remedy,");
+  display.setCursor(0, 20);
+  display.print("OK to proceed");
+  display.display();
 
-void waitForNextButton() {
-  while (digitalRead(buttonNextPin) == HIGH) {
-    delay(10); // Wait for the Next button to be pressed
-  }
-  while (digitalRead(buttonNextPin) == LOW) {
-    delay(10); // Debounce delay
-  }
-}
-
-void waitForOKButton() {
-  while (digitalRead(buttonOKPin) == HIGH) {
-    delay(10); // Wait for the OK button to be pressed
-  }
-  while (digitalRead(buttonOKPin) == LOW) {
-    delay(10); // Debounce delay
+  // Wait for either Prev or OK button to be pressed
+  bool waitingForInput = true;
+  while (waitingForInput) {
+    if (digitalRead(buttonPrevPin) == LOW) {
+      delay(debounceDelay); // Debounce delay
+      method478(); // Retake remedy
+      waitingForInput = false;
+    } else if (digitalRead(buttonOKPin) == LOW) {
+      delay(debounceDelay); // Debounce delay
+      currentQuestion = 0; // Restart from decoy question
+      for (int i = 0; i < 21; i++) {
+        responses[i] = 0; // Reset responses
+      }
+      showQuestion(); // Start from the first question
+      waitingForInput = false;
+    }
+    delay(10);
   }
 }
