@@ -217,8 +217,11 @@ void showScore() {
   Serial.print("Classification: ");
   Serial.println(classification);
 
-  // If the score is between 16 and 25, call the 4-7-8 method
-  if (score >= 16 && score <= 25) {
+  // Call appropriate method based on the score
+  if (score >= 26 && score <= 63) {
+    delay(5000); // Show score for 5 seconds
+    method54321();
+  } else if (score >= 16 && score <= 25) {
     delay(5000); // Show score for 5 seconds
     method478();
   } else {
@@ -247,9 +250,9 @@ void method478() {
   display.setCursor(0, 0);
   display.print("Sit or lie down");
   display.setCursor(0, 10);
-  display.print("comfortably.");
+  display.print("comfortably. Once");
   display.setCursor(0, 20);
-  display.print("Once done press Next");
+  display.print("done press Next");
   display.display();
 
   // Wait for Next button to be pressed
@@ -257,71 +260,191 @@ void method478() {
     delay(10); // Debounce delay
   }
 
-  // Step 3: Display "Inhale quietly through your nose until you hear a sound." for 4.5 seconds
+  // Step 3: Display "Inhale quietly through your nose until you hear a sound." and beep buzzer twice
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Inhale quietly");
+  display.print("Inhale quietly through");
   display.setCursor(0, 10);
-  display.print("through your nose");
+  display.print("your nose until you");
   display.setCursor(0, 20);
-  display.print("until you hear a sound.");
+  display.print("hear a sound.");
   display.display();
-  delay(4500); // 4.5 seconds
-  tone(buzzerPin, 1000, 500); // Beep buzzer twice
+  tone(buzzerPin, 1000); // Beep buzzer
   delay(500);
-  tone(buzzerPin, 1000, 500);
+  noTone(buzzerPin);
+  delay(500);
+  tone(buzzerPin, 1000); // Beep buzzer again
+  delay(500);
+  noTone(buzzerPin);
 
-  // Step 4: Display "Hold your breath until you hear a sound." for 7.5 seconds
+  // Wait for 4.5 seconds
+  delay(4500);
+
+  // Step 4: Display "Hold your breath until you hear a sound" and beep buzzer twice
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Hold your breath");
+  display.print("Hold your breath until");
   display.setCursor(0, 10);
-  display.print("until you hear a sound.");
+  display.print("you hear a sound");
   display.display();
-  delay(7500); // 7.5 seconds
-  tone(buzzerPin, 1000, 500); // Beep buzzer twice
+  tone(buzzerPin, 1000); // Beep buzzer
   delay(500);
-  tone(buzzerPin, 1000, 500);
+  noTone(buzzerPin);
+  delay(500);
+  tone(buzzerPin, 1000); // Beep buzzer again
+  delay(500);
+  noTone(buzzerPin);
+
+  // Wait for 7.5 seconds
+  delay(7500);
 
   // Step 5: Beep buzzer continuously for 8 seconds while displaying "Exhale completely through your mouth until sound stops"
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Exhale completely");
+  display.print("Exhale completely through");
   display.setCursor(0, 10);
-  display.print("through your mouth");
+  display.print("your mouth until sound");
   display.setCursor(0, 20);
-  display.print("until sound stops");
+  display.print("stops.");
   display.display();
-  tone(buzzerPin, 1000); // Continuous beep
-  delay(8000); // 8 seconds
+  tone(buzzerPin, 1000); // Beep buzzer continuously
+  unsigned long startTime = millis();
+  while (millis() - startTime < 8000) {
+    // Continue beeping for 8 seconds
+  }
   noTone(buzzerPin);
 
   // Step 6: Display "Press Prev to retake remedy, OK to proceed"
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.print("Press Prev to");
+  display.print("Press Prev to retake");
   display.setCursor(0, 10);
-  display.print("retake remedy,");
-  display.setCursor(0, 20);
-  display.print("OK to proceed");
+  display.print("remedy, OK to proceed");
   display.display();
 
-  // Wait for either Prev or OK button to be pressed
-  bool waitingForInput = true;
-  while (waitingForInput) {
+  // Wait for Prev or OK button to be pressed
+  bool finished = false;
+  while (!finished) {
     if (digitalRead(buttonPrevPin) == LOW) {
-      delay(debounceDelay); // Debounce delay
-      method478(); // Retake remedy
-      waitingForInput = false;
-    } else if (digitalRead(buttonOKPin) == LOW) {
-      delay(debounceDelay); // Debounce delay
-      currentQuestion = 0; // Restart from decoy question
-      for (int i = 0; i < 21; i++) {
-        responses[i] = 0; // Reset responses
-      }
-      showQuestion(); // Start from the first question
-      waitingForInput = false;
+      method478(); // Restart 478 technique
+      return;
     }
-    delay(10);
+    if (digitalRead(buttonOKPin) == LOW) {
+      finished = true;
+    }
+    delay(10); // Debounce delay
   }
+
+  // Restart the test from the decoy question
+  currentQuestion = 0; // Restart from decoy question
+  for (int i = 0; i < 21; i++) {
+    responses[i] = 0; // Reset responses
+  }
+  showQuestion(); // Start from the first question
+}
+
+void method54321() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // Step 1: Display "Press OK to continue"
+  display.setCursor(0, 0);
+  display.print("Press OK to continue");
+  display.display();
+
+  // Wait for OK button to be pressed
+  while (digitalRead(buttonOKPin) == HIGH) {
+    delay(10); // Debounce delay
+  }
+
+  // Step 2: Display "Look and notice 5 things you haven't noticed before. Press Next once done"
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Look and notice 5");
+  display.setCursor(0, 10);
+  display.print("things you haven't");
+  display.setCursor(0, 20);
+  display.print("noticed before.");
+  display.setCursor(0, 30);
+  display.print("Press Next once done.");
+  display.display();
+
+  // Wait for Next button to be pressed
+  while (digitalRead(buttonNextPin) == LOW) {
+    delay(10); // Debounce delay
+  }
+
+  // Step 3: Display "Identify 4 things you can touch and notice the feeling of objects around you. Press Next once done."
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Identify 4 things");
+  display.setCursor(0, 10);
+  display.print("you can touch and");
+  display.setCursor(0, 20);
+  display.print("notice the feeling");
+  display.setCursor(0, 30);
+  display.print("of objects around you.");
+  display.setCursor(0, 40);
+  display.print("Press Next once done.");
+  display.display();
+
+  // Wait for Next button to be pressed
+  while (digitalRead(buttonNextPin) == LOW) {
+    delay(10); // Debounce delay
+  }
+
+  // Step 4: Display "Focus on 3 different sounds you can hear and press Next once done"
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Focus on 3 different");
+  display.setCursor(0, 10);
+  display.print("sounds you can hear.");
+  display.setCursor(0, 20);
+  display.print("Press Next once done.");
+  display.display();
+
+  // Wait for Next button to be pressed
+  while (digitalRead(buttonNextPin) == LOW) {
+    delay(10); // Debounce delay
+  }
+
+  // Step 5: Display "Identify 2 scents you can smell. Press Next once done"
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Identify 2 scents");
+  display.setCursor(0, 10);
+  display.print("you can smell.");
+  display.setCursor(0, 20);
+  display.print("Press Next once done.");
+  display.display();
+
+  // Wait for Next button to be pressed
+  while (digitalRead(buttonNextPin) == LOW) {
+    delay(10); // Debounce delay
+  }
+
+  // Step 6: Display "Notice any taste in your mouth or imagine a favorite taste. Press OK to finish"
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("Notice any taste in");
+  display.setCursor(0, 10);
+  display.print("your mouth or imagine");
+  display.setCursor(0, 20);
+  display.print("a favorite taste.");
+  display.setCursor(0, 30);
+  display.print("Press OK to finish.");
+  display.display();
+
+  // Wait for OK button to be pressed
+  while (digitalRead(buttonOKPin) == HIGH) {
+    delay(10); // Debounce delay
+  }
+
+  // Restart the test from the decoy question
+  currentQuestion = 0; // Restart from decoy question
+  for (int i = 0; i < 21; i++) {
+    responses[i] = 0; // Reset responses
+  }
+  showQuestion(); // Start from the first question
 }
